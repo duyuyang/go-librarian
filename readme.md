@@ -10,7 +10,7 @@ http://localhost:8080/
 
 ## setup webserver negroni
 
-go get github.com/codegangsta/negroni
+go get github.com/urfave/negroni
 
 ## Setup db
 
@@ -45,4 +45,6 @@ https://github.com/go-gorp/gorp
 
 go get gopkg.in/gorp.v1
 
+## manage sessions
 
+go get github.com/goincremental/negroni-sessions

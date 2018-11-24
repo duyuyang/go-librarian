@@ -7,6 +7,8 @@ import (
 
 	"database/sql"
 
+	"github.com/goincremental/negroni-sessions"
+	"github.com/goincremental/negroni-sessions/cookiestore"
 	_ "github.com/mattn/go-sqlite3"
 	"gopkg.in/gorp.v1"
 
@@ -14,8 +16,8 @@ import (
 	"encoding/xml"
 	"strconv"
 
-	"github.com/codegangsta/negroni"
 	gmux "github.com/gorilla/mux"
+	"github.com/urfave/negroni"
 	"github.com/yosssi/ace"
 )
 
@@ -58,21 +60,54 @@ func verifyDatabase(w http.ResponseWriter, r *http.Request, next http.HandlerFun
 	next(w, r)
 }
 
+func getBookCollection(books *[]Book, sortCol string, w http.ResponseWriter) bool {
+	if sortCol != "title" && sortCol != "author" && sortCol != "classification" {
+		sortCol = "pk"
+	}
+	if _, err := dbmap.Select(books, "select * from books order by "+sortCol); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return false
+	}
+	return true
+}
+
 func main() {
 
 	initDb()
 
 	mux := gmux.NewRouter()
 
+	mux.HandleFunc("/books", func(w http.ResponseWriter, r *http.Request) {
+		var b []Book
+		if !getBookCollection(&b, r.FormValue("sortBy"), w) {
+			return
+		}
+		sessions.GetSession(r).Set("SortBy", r.FormValue("sortBy"))
+
+		if err := json.NewEncoder(w).Encode(b); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}).Methods("GET")
+
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		t, err := ace.Load("templates/index", "", nil)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
+		// var sortColumn string
+
+		// if sortBy := sessions.GetSession(r).Get("SortBy"); sortBy != nil {
+		// 	sortColumn = sortBy.(string)
+		// }
+
 		p := Page{Books: []Book{}}
 
-		if _, err = dbmap.Select(&p.Books, "select * from books"); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+		// if !getBookCollection(&p.Books, sortColumn, w) {
+		// 	return
+		// }
+
+		if !getBookCollection(&p.Books, "pk", w) {
 			return
 		}
 
@@ -130,6 +165,7 @@ func main() {
 	}).Methods("DELETE")
 
 	n := negroni.Classic()
+	n.Use(sessions.Sessions("go-for-web-dev", cookiestore.New([]byte("secret123"))))
 	n.Use(negroni.HandlerFunc(verifyDatabase))
 	n.UseHandler(mux)
 	n.Run(":8080")

@@ -76,12 +76,6 @@ func main() {
 			return
 		}
 
-		// rows, _ := db.Query("select pk,title,author,classification from books")
-		// for rows.Next() {
-		// 	var b Book
-		// 	rows.Scan(&b.PK, &b.Title, &b.Author, &b.Classification)
-		// 	p.Books = append(p.Books, b)
-		// }
 		if err := t.Execute(w, p); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}

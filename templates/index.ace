@@ -1,38 +1,29 @@
-<html>
-  <head>
-    <style>
+= doctype html
+html
+  head
+    = css
       #search-results tr:hover {
         background-color: lightgrey;
         cursor: pointer;
       }
-    </style>
-  </head>
-  <body>
-    <form id="search-form" onsubmit="return false">
-      <input name="search" />
-      <input type="submit" value="Search" onclick="submitSearch()"/>
-    </form>
 
-    <table width="100%">
-      <thead>
-        <tr style="text-align: left;">
-          <th width="40%">Title</th>
-          <th width="30%">Author</th>
-          <th width="10%">Year</th>
-          <th width="20%">ID</th>
-        </tr>
+  body
+    form id="search-form" onsubmit="return false"
+      input name="search"
+      input type="submit" value="Search" onclick="submitSearch()"
 
-      </thead>
+    table width="100%"
+      thead
+        tr style="text-align: left;"
+          th width="40%" Title
+          th width="30%" Author
+          th width="10%" Year
+          th width="20%" ID
+      tbody id="search-results"
 
-      <tbody id="search-results">
-      </tbody>
+    script type="text/javascript" src="http://code.jquery.com/jquery-2.1.4.min.js"
 
-
-    </table>
-
-    <script type="text/javascript" src="http://code.jquery.com/jquery-2.1.4.min.js"></script>
-
-    <script type="text/javascript">
+    = javascript
       function submitSearch(){
         $.ajax({
           url: "/search",
@@ -59,7 +50,3 @@
         });
         return false;
       }
-    </script>
-
-  </body>
-</html>

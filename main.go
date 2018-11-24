@@ -1,7 +1,6 @@
 package main
 
 import (
-	"html/template"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -14,6 +13,7 @@ import (
 	"encoding/xml"
 
 	"github.com/codegangsta/negroni"
+	"github.com/yosssi/ace"
 )
 
 type Page struct {
@@ -39,19 +39,23 @@ func verifyDatabase(w http.ResponseWriter, r *http.Request, next http.HandlerFun
 }
 
 func main() {
-	t := template.Must(template.ParseFiles("templates/index.html"))
+	// t := template.Must(template.ParseFiles("templates/index.html"))
 	db, _ = sql.Open("sqlite3", "dev.db")
 
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		t, err := ace.Load("templates/index", "", nil)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
 		p := Page{Name: "Gopher"}
 		if name := r.FormValue("name"); name != "" {
 			p.Name = name
 		}
 		p.DBStatus = db.Ping() == nil
-
-		if err := t.ExecuteTemplate(w, "index.html", p); err != nil {
+ 
+		if err := t.Execute(w, p); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
 	})

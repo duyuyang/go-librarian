@@ -30,3 +30,7 @@ classification text);
 sqlite> select * from books;
 
 sqlite> .exit
+
+## html template render
+
+go get github.com/yosssi/ace

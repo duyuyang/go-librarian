@@ -8,9 +8,11 @@ import (
 	"database/sql"
 
 	_ "github.com/mattn/go-sqlite3"
+	"gopkg.in/gorp.v1"
 
 	"encoding/json"
 	"encoding/xml"
+	"strconv"
 
 	"github.com/codegangsta/negroni"
 	gmux "github.com/gorilla/mux"
@@ -18,10 +20,11 @@ import (
 )
 
 type Book struct {
-	PK             int
-	Title          string
-	Author         string
-	Classification string
+	PK             int64  `db:"pk"`
+	Title          string `db:"title"`
+	Author         string `db:"author"`
+	Classification string `db:"classification"`
+	ID             string `db:"id"`
 }
 
 type Page struct {
@@ -36,6 +39,16 @@ type SearchResult struct {
 }
 
 var db *sql.DB
+var dbmap *gorp.DbMap
+
+func initDb() {
+	db, _ = sql.Open("sqlite3", "dev.db")
+
+	dbmap = &gorp.DbMap{Db: db, Dialect: gorp.SqliteDialect{}}
+
+	dbmap.AddTableWithName(Book{}, "books").SetKeys(true, "pk")
+	dbmap.CreateTablesIfNotExists()
+}
 
 func verifyDatabase(w http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
 	if err := db.Ping(); err != nil {
@@ -46,10 +59,9 @@ func verifyDatabase(w http.ResponseWriter, r *http.Request, next http.HandlerFun
 }
 
 func main() {
-	// t := template.Must(template.ParseFiles("templates/index.html"))
-	db, _ = sql.Open("sqlite3", "dev.db")
 
-	//mux := http.NewServeMux()
+	initDb()
+
 	mux := gmux.NewRouter()
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -58,12 +70,18 @@ func main() {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
 		p := Page{Books: []Book{}}
-		rows, _ := db.Query("select pk,title,author,classification from books")
-		for rows.Next() {
-			var b Book
-			rows.Scan(&b.PK, &b.Title, &b.Author, &b.Classification)
-			p.Books = append(p.Books, b)
+
+		if _, err = dbmap.Select(&p.Books, "select * from books"); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
+
+		// rows, _ := db.Query("select pk,title,author,classification from books")
+		// for rows.Next() {
+		// 	var b Book
+		// 	rows.Scan(&b.PK, &b.Title, &b.Author, &b.Classification)
+		// 	p.Books = append(p.Books, b)
+		// }
 		if err := t.Execute(w, p); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
@@ -89,21 +107,18 @@ func main() {
 		var err error
 		if book, err = find(r.FormValue("id")); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
 
-		result, err := db.Exec("insert into books (pk, title, author, id, classification) values (?, ?, ?, ?, ?)", nil, book.BookData.Title, book.BookData.Author, book.BookData.ID,
-			book.Classification.MostPopular)
-
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		}
-
-		pk, _ := result.LastInsertId()
 		b := Book{
-			PK:             int(pk),
+			PK:             -1,
 			Title:          book.BookData.Title,
 			Author:         book.BookData.Author,
 			Classification: book.Classification.MostPopular,
+		}
+		if err = dbmap.Insert(&b); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
 
 		if err := json.NewEncoder(w).Encode(b); err != nil {
@@ -112,7 +127,8 @@ func main() {
 	}).Methods("PUT")
 
 	mux.HandleFunc("/books/{pk}", func(w http.ResponseWriter, r *http.Request) {
-		if _, err := db.Exec("delete from books where PK = ?", gmux.Vars(r)["pk"]); err != nil {
+		pk, _ := strconv.ParseInt(gmux.Vars(r)["pk"], 10, 64)
+		if _, err := dbmap.Delete(&Book{pk, "", "", "", ""}); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}

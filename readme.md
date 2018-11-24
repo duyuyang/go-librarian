@@ -38,3 +38,11 @@ go get github.com/yosssi/ace
 ## http route
 
 go get github.com/gorilla/mux
+
+## db query
+
+https://github.com/go-gorp/gorp
+
+go get gopkg.in/gorp.v1
+
+

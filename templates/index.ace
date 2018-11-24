@@ -72,6 +72,10 @@ html
 
     = javascript
 
+      $(document).ready(function(){
+        $("#filter-view-results option[value='" + {{.Filter}} + "']").prop("selected", true);
+      })
+
       function filterViewResults(){
         $.ajax({
           method: "GET",

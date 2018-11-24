@@ -109,6 +109,14 @@ func main() {
 		}
 	})
 
+	mux.HandleFunc("/books/delete", func(w http.ResponseWriter, r *http.Request) {
+		if _, err := db.Exec("delete from books where PK = ?", r.FormValue("pk")); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	})
+
 	n := negroni.Classic()
 	n.Use(negroni.HandlerFunc(verifyDatabase))
 	n.UseHandler(mux)

@@ -75,3 +75,8 @@ github.com/go-martini/martini
 
 github.com/revel/revel
 github.com/revel/cmd/revel
+
+## migrate to postgresql
+
+`postgresql driver`
+github.com/lib/pq

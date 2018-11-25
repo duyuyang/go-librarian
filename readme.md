@@ -31,6 +31,12 @@ sqlite> select * from books;
 
 sqlite> .exit
 
+`alter the table`
+
+sqlite> alter table books add column user varchar(255); 
+
+
+
 ## html template render
 
 go get github.com/yosssi/ace
@@ -52,3 +58,20 @@ go get github.com/goincremental/negroni-sessions
 ## encrypt user
 
 go get golang.org/x/crypto/bcrypt
+
+
+## Wrapping up
+
+`Goji`
+https://github.com/zenazn/goji
+
+
+`Martini`
+
+github.com/go-martini/martini
+
+
+`Revel`
+
+github.com/revel/revel
+github.com/revel/cmd/revel

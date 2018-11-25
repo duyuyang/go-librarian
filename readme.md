@@ -48,3 +48,7 @@ go get gopkg.in/gorp.v1
 ## manage sessions
 
 go get github.com/goincremental/negroni-sessions
+
+## encrypt user
+
+go get golang.org/x/crypto/bcrypt

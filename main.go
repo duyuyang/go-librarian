@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"net/url"
 
+	"golang.org/x/crypto/bcrypt"
+
 	"database/sql"
 
 	"github.com/goincremental/negroni-sessions"
@@ -29,6 +31,11 @@ type Book struct {
 	ID             string `db:"id"`
 }
 
+type User struct {
+	Username string `db:"username"`
+	Secret   []byte `db:"secret"`
+}
+
 type Page struct {
 	Books  []Book
 	Filter string
@@ -50,6 +57,7 @@ func initDb() {
 	dbmap = &gorp.DbMap{Db: db, Dialect: gorp.SqliteDialect{}}
 
 	dbmap.AddTableWithName(Book{}, "books").SetKeys(true, "pk")
+	dbmap.AddTableWithName(User{}, "users").SetKeys(false, "username")
 	dbmap.CreateTablesIfNotExists()
 }
 
@@ -88,6 +96,10 @@ func getStringFromSession(r *http.Request, key string) string {
 	return strVal
 }
 
+type LoginPage struct {
+	Error string
+}
+
 func main() {
 
 	initDb()
@@ -95,10 +107,32 @@ func main() {
 	mux := gmux.NewRouter()
 
 	mux.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
+		var p LoginPage
+		if r.FormValue("register") != "" {
+			secret, _ := bcrypt.GenerateFromPassword([]byte(r.FormValue("password")), bcrypt.DefaultCost)
+			user := User{r.FormValue("username"), secret}
+			if err := dbmap.Insert(&user); err != nil {
+				p.Error = err.Error()
+			} else {
+				http.Redirect(w, r, "/", http.StatusFound)
+				return
+			}
+		} else if r.FormValue("login") != "" {
+			user, err := dbmap.Get(User{}, r.FormValue("username"))
+			if err != nil {
+				p.Error = err.Error()
+			} else if user == nil {
+				p.Error = "No such user found with Username: " + r.FormValue("username")
+			} else {
+				u := user.(*User)
+				if err = bcrypt.CompareHashAndPassword(u.Secret, []byte(r.FormValue("password"))); err != nil {
+					p.Error = err.Error()
+				} else {
+					http.Redirect(w, r, "/", http.StatusFound)
+					return
+				}
+			}
 
-		if r.FormValue("register") != "" || r.FormValue("login") != "" {
-			http.Redirect(w, r, "/", http.StatusFound)
-			return
 		}
 
 		t, err := ace.Load("templates/login", "", nil)
@@ -106,7 +140,7 @@ func main() {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
 
-		if err := t.Execute(w, nil); err != nil {
+		if err := t.Execute(w, p); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
